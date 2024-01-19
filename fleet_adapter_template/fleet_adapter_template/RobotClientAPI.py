@@ -1,3 +1,5 @@
+import requests
+
 # Copyright 2021 Open Source Robotics Foundation, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,10 +37,16 @@ class RobotAPI:
 
     def check_connection(self):
         ''' Return True if connection to the robot API server is successful '''
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
-        return True
+        url = self.prefix + "kachaka/get_robot_serial_number"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                return True
+            else:
+                return False
+        except Exception as e:
+            print(e)
+            return False
 
     def navigate(
         self,
@@ -51,10 +59,25 @@ class RobotAPI:
             and theta are in the robot's coordinate convention. This function
             should return True if the robot has accepted the request,
             else False '''
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
-        return False
+        url = self.prefix + robot_name + "/set_robot_velocity"
+        if speed_limit == 0.0:
+            velocity = {"linear": 1.0, "angular": 1.0}
+        else:
+            velocity = {"linear": speed_limit, "angular": 1.0}
+        response = requests.post(url, json=velocity)
+
+        url = self.prefix + robot_name + "/move_to_pose"
+        position = {"x": pose[0], "y": pose[1], "yaw": pose[2]}
+        print(pose)
+        try:
+            response = requests.post(url, json=position)
+            if response.status_code == 200:
+                return True
+            else:
+                return False
+        except Exception as e:
+            print(e)
+            return False
 
     def start_activity(
         self,
@@ -75,22 +98,37 @@ class RobotAPI:
     def stop(self, robot_name: str):
         ''' Command the robot to stop.
             Return True if robot has successfully stopped. Else False. '''
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
-        return False
+        url = self.prefix + robot_name + "/cancel_command"
+        try:
+            response = requests.get(url)
+            res = response.json()
+            if res['success']:
+                return True
+            else:
+                return False
+        except Exception as e:
+            print(e)
+            return False
 
     def position(self, robot_name: str):
         ''' Return [x, y, theta] expressed in the robot's coordinate frame or
         None if any errors are encountered '''
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
-        return None
+        url = self.prefix + robot_name + "/get_robot_pose"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                res = response.json()
+                return [res['x'], res['y'], res['theta']]
+            else:
+                return None
+        except Exception as e:
+            print(e)
+            return None
 
     def battery_soc(self, robot_name: str):
         ''' Return the state of charge of the robot as a value between 0.0
         and 1.0. Else return None if any errors are encountered. '''
+        # Now submit a request to make API
         # ------------------------ #
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
@@ -99,18 +137,32 @@ class RobotAPI:
     def map(self, robot_name: str):
         ''' Return the name of the map that the robot is currently on or
         None if any errors are encountered. '''
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
-        return None
+        url = self.prefix + "kachaka/get_last_command_result"
+        try:
+            response = requests.get(url)
+            res = response.json()
+            if response.status_code == 200:
+                return res['name']
+            else:
+                return None
+        except Exception as e:
+            print(e)
+            return None
 
     def is_command_completed(self):
         ''' Return True if the robot has completed its last command, else
         return False. '''
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
-        return False
+        url = self.prefix + "kachaka/get_last_command_result"
+        try:
+            response = requests.get(url)
+            res = response.json()
+            if res['success']:
+                return True
+            else:
+                return False
+        except Exception as e:
+            print(e)
+            return False
 
     def get_data(self, robot_name: str):
         ''' Returns a RobotUpdateData for one robot if a name is given. Otherwise
@@ -125,6 +177,7 @@ class RobotAPI:
 
 class RobotUpdateData:
     ''' Update data for a single robot. '''
+
     def __init__(self,
                  robot_name: str,
                  map: str,
