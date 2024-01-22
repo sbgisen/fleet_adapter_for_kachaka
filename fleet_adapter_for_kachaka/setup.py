@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = 'fleet_adapter_template'
+package_name = 'fleet_adapter_for_kachaka'
 
 setup(
     name=package_name,
@@ -17,12 +17,12 @@ setup(
     zip_safe=True,
     maintainer='Yadunund',
     maintainer_email='yadunund@openrobotics.org',
-    description='A template for an RMF fleet adapter',
+    description='A RMF fleet adapter for kachaka',
     license='Apache License 2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'fleet_adapter=fleet_adapter_template.fleet_adapter:main'
+            'fleet_adapter=fleet_adapter_for_kachaka.fleet_adapter:main'
         ],
     },
 )
