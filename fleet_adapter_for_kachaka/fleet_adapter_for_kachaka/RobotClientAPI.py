@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- encoding: utf-8 -*-
+
 import requests
 
 # Copyright 2021 Open Source Robotics Foundation, Inc.
@@ -22,6 +25,22 @@ import requests
     will need to make http request calls to the appropriate endpoints within
     these functions.
 '''
+
+
+class RobotUpdateData:
+    ''' Update data for a single robot. '''
+
+    def __init__(self,
+                 robot_name: str,
+                 map: str,
+                 position: list[float],
+                 battery_soc: float,
+                 requires_replan: bool | None = None) -> None:
+        self.robot_name = robot_name
+        self.position = position
+        self.map = map
+        self.battery_soc = battery_soc
+        self.requires_replan = requires_replan
 
 
 class RobotAPI:
@@ -60,6 +79,7 @@ class RobotAPI:
             should return True if the robot has accepted the request,
             else False '''
         url = self.prefix + "kachaka/set_robot_velocity"
+        # TODO: speed_limit is error in http request
         if speed_limit == 0.0:
             velocity = {"linear": 1.0, "angular": 1.0}
         else:
@@ -89,20 +109,14 @@ class RobotAPI:
         or begin cleaning a zone for a cleaning robot.
         Return True if process has started/is queued successfully, else
         return False '''
+        # TODO: How to dock to charge station?
         print(f"start activity. {activity}_command, {label}")
-        if activity == "pickup":
-            url = self.prefix + "kachaka/dock_shelf"
-            shelf = {"title": 'S01'}
-            # TODO shelf = {"title": f"{label}"}
-
-        elif activity == "dropoff":
-            url = self.prefix + "kachaka/undock_shelf"
-            shelf = {"title": 'S01'}
-            # TODO shelf = {"title": f"{label}"}
+        if activity == "dock":
+            url = self.prefix + "kachaka/return_home"
         else:
             return False
         try:
-            response = requests.post(url, json=shelf)
+            response = requests.post(url)
             if response.status_code == 200:
                 return True
             else:
@@ -149,15 +163,17 @@ class RobotAPI:
         # ------------------------ #
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
+        # TODO: The battery_soc is not implemented in the API
         return 0.8
 
     def map(self, robot_name: str) -> str | None:
         ''' Return the name of the map that the robot is currently on or
         None if any errors are encountered. '''
         url = self.prefix + "kachaka/get_png_map"
+        # TODO The map name is needed but get_pnt_map returns not only name but also a png file
         try:
             response = requests.get(url)
-            res = response.json()
+            # res = response.json()
             if response.status_code == 200:
                 return "L1"
                 # TODO return res['name']
@@ -182,7 +198,7 @@ class RobotAPI:
             print(e)
             return False
 
-    def get_data(self, robot_name: str):
+    def get_data(self, robot_name: str) -> RobotUpdateData | list[RobotUpdateData] | None:
         ''' Returns a RobotUpdateData for one robot if a name is given. Otherwise
         return a list of RobotUpdateData for all robots. '''
         map = self.map(robot_name)
@@ -191,19 +207,3 @@ class RobotAPI:
         if not (map is None or position is None or battery_soc is None):
             return RobotUpdateData(robot_name, map, position, battery_soc)
         return None
-
-
-class RobotUpdateData:
-    ''' Update data for a single robot. '''
-
-    def __init__(self,
-                 robot_name: str,
-                 map: str,
-                 position: list[float],
-                 battery_soc: float,
-                 requires_replan: bool | None = None) -> None:
-        self.robot_name = robot_name
-        self.position = position
-        self.map = map
-        self.battery_soc = battery_soc
-        self.requires_replan = requires_replan
