@@ -79,8 +79,7 @@ class RobotAPI:
             should return True if the robot has accepted the request,
             else False '''
         url = self.prefix + "kachaka/set_robot_velocity"
-        # TODO: speed_limit is error in http request
-        if speed_limit == 0.0:
+        if speed_limit == 0.0 or speed_limit is None:
             velocity = {"linear": 1.0, "angular": 1.0}
         else:
             velocity = {"linear": speed_limit, "angular": 1.0}
