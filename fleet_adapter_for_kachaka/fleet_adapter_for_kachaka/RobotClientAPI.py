@@ -169,14 +169,28 @@ class RobotAPI:
     def map(self, robot_name: str) -> str | None:
         ''' Return the name of the map that the robot is currently on or
         None if any errors are encountered. '''
-        url = self.prefix + "kachaka/get_png_map"
-        # TODO The map name is needed but get_pnt_map returns not only name but also a png file
+        url = self.prefix + "kachaka/get_map_list"
         try:
             response = requests.get(url)
-            # res = response.json()
             if response.status_code == 200:
+                map_list = response.json()
+            else:
+                return None
+        except Exception as e:
+            print(e)
+            return None
+        if map_list is None:
+            return None
+        url = self.prefix + "kachaka/get_current_map_id"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                serach_id = response.json()
+                map_name = next(
+                    (item for item in map_list if item["id"] == serach_id), {'name': "L1"})
+                print(map_name['name'])
+                # return map_name['name']
                 return "L1"
-                # TODO return res['name']
             else:
                 return None
         except Exception as e:
