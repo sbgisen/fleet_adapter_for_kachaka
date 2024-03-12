@@ -6,36 +6,20 @@ The objective of this package is to serve as a reference or template for writing
 
 > Note: The implementation in this package is not the only way to write a `full_control` fleet adapter. It is only one such example that may be helpful for users to quickly integrate their fleets with RMF.
 
-## Step 1: Fill up missing code
-Simply fill up certain blocks of code which make API calls to your mobile robotic fleet.
-These blocks are highlighted as seen below and are found in `RobotClientAPI.py` and `fleet_adapter.py` respectively.
-```
-# IMPLEMENT YOUR CODE HERE #
-```
 
-The bulk of the work is in populating the `RobotClientAPI.py` file which defines a wrapper for communicating with the fleet of interest.
-For example, if your fleet offers a `REST API` with a `GET` method to obtain the position of the robot, then the `RobotAPI::position()` function may be implemented as below
+## Step 1: Setup Kachaka
 
-```python
-def position(self):
-    url = self.prefix + "/data/position" # example endpoint
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        x = data["x"]
-        y = data["y"]
-        angle = data["angle"]
-        return [x, y, angle]
-    except HTTPError as http_err:
-        print(f"HTTP error: {http_err}")
-    except Exception as err:
-        print(f"Other error: {err}")
-    return None
+Using [forked Kachaka-api](https://github.com/h-wata/kachaka-api/blob/feature/rest_api_wrapper/python/demos/url_kachaka_api.ipynb), run the REST API.
 
+```bash
+export KACHAKA_IP=192.168.XX.YY
+ssh -p 26500 -l kachaka $KACHAKA_IP
+cd kachaka-api
+git remote add h-wata https://github.com:h-wata/feature/rest_api_wrapper
+git pull feature/rest_api_wrapper
 ```
 
-Alternatively, if your robotic fleet offers a websocket port for communication or allows for messages to be exchanged over ROS1/2, then these functions can be implemented using those protocols respectively.
+Please run `python/demos/url_kachaka_api.ipynb` in Jupyter Notebook.
 
 ## Step 2: Update config.yaml
 The `config.yaml` file contains important parameters for setting up the fleet adapter. There are three broad sections to this file:
@@ -54,11 +38,11 @@ The websocket server URI should also be passed as a parameter in this command in
 
 ```bash
 #minimal required parameters
-ros2 run fleet_adapter_template fleet_adapter -c CONFIG_FILE -n NAV_GRAPH
+ros2 run fleet_adapter_for_kachaka fleet_adapter -c CONFIG_FILE -n NAV_GRAPH
 
 #Usage with the websocket uri
-ros2 run fleet_adapter_template fleet_adapter -c CONFIG_FILE -n NAV_GRAPH -s SERVER_URI
+ros2 run fleet_adapter_for_kachaka template fleet_adapter -c CONFIG_FILE -n NAV_GRAPH -s SERVER_URI
 
 #e.g.
-ros2 run fleet_adapter_template fleet_adapter -c CONFIG_FILE -n NAV_GRAPH -s ws://localhost:7878
+ros2 run fleet_adapter_for_kachaka template fleet_adapter -c CONFIG_FILE -n NAV_GRAPH -s ws://localhost:7878
 ```
