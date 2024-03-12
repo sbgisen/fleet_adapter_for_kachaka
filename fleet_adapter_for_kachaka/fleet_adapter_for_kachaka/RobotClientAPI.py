@@ -53,6 +53,7 @@ class RobotAPI:
         self.password = config_yaml['password']
         self.timeout = 5.0
         self.debug = False
+        self.task_id = ""
 
     def check_connection(self) -> bool:
         ''' Return True if connection to the robot API server is successful '''
@@ -89,6 +90,7 @@ class RobotAPI:
         position = {"x": pose[0], "y": pose[1], "yaw": pose[2]}
         try:
             response = requests.post(url, json=position)
+            self.task_id = response.json()['id']
             if response.status_code == 200:
                 return True
             else:
@@ -116,6 +118,7 @@ class RobotAPI:
             return False
         try:
             response = requests.post(url)
+            self.task_id = response.json()['id']
             if response.status_code == 200:
                 return True
             else:
@@ -123,6 +126,9 @@ class RobotAPI:
         except Exception as e:
             print(e)
             return False
+
+    def get_task_id(self) -> str:
+        return self.task_id
 
     def stop(self, robot_name: str) -> bool:
         ''' Command the robot to stop.
@@ -187,7 +193,6 @@ class RobotAPI:
                 serach_id = response.json()
                 map_name = next(
                     (item for item in map_list if item["id"] == serach_id), {'name': "L1"})
-                print(map_name['name'])
                 # return map_name['name']
                 return "L1"
             else:
@@ -199,11 +204,10 @@ class RobotAPI:
     def is_command_completed(self) -> bool:
         ''' Return True if the robot has completed its last command, else
         return False. '''
-        url = self.prefix + "kachaka/get_last_command_result"
+        url = self.prefix + f"command_result?task_id={self.task_id}"
         try:
             response = requests.get(url)
-            res = response.json()
-            if res[0]['success']:
+            if response.status_code == 200:
                 return True
             else:
                 return False
@@ -211,7 +215,7 @@ class RobotAPI:
             print(e)
             return False
 
-    def get_data(self, robot_name: str) -> RobotUpdateData | list[RobotUpdateData] | None:
+    def get_data(self, robot_name: str) -> RobotUpdateData | None:
         ''' Returns a RobotUpdateData for one robot if a name is given. Otherwise
         return a list of RobotUpdateData for all robots. '''
         map = self.map(robot_name)
