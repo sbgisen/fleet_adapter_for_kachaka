@@ -2,6 +2,7 @@
 # -*- encoding: utf-8 -*-
 
 import requests
+import time
 
 # Copyright 2021 Open Source Robotics Foundation, Inc.
 #
@@ -110,18 +111,18 @@ class RobotAPI:
         or begin cleaning a zone for a cleaning robot.
         Return True if process has started/is queued successfully, else
         return False '''
-        # TODO: How to dock to charge station?
-        print(f"start activity. {activity}_command, {label}")
         if activity == "dock":
             url = self.prefix + "kachaka/return_home"
+            payload = {}
         else:
             return False
         try:
-            response = requests.post(url)
+            response = requests.post(url, json=payload)
             self.task_id = response.json()['id']
             if response.status_code == 200:
                 return True
             else:
+                print(f"{response.status_code} error, {response.json()}")
                 return False
         except Exception as e:
             print(e)

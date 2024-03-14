@@ -177,7 +177,7 @@ class RobotAdapter:
     def __init__(
         self,
         name: str,
-        configuration: dict,
+        configuration,
         node: rclpy.node.Node,
         api: RobotAPI,
         fleet_handle: EasyFullControl
@@ -189,6 +189,7 @@ class RobotAdapter:
         self.node = node
         self.api = api
         self.fleet_handle = fleet_handle
+        self.charge_station = self.configuration.compatible_chargers[0]
 
     def update(self, state: rmf_easy.RobotState) -> None:
         activity_identifier = None
@@ -218,7 +219,7 @@ class RobotAdapter:
             f'Commanding [{self.name}] to navigate to {destination.position} '
             f'on map [{destination.map}]'
         )
-        if destination.dock is self.configuration['charger']:
+        if destination.dock == self.charge_station:
             self.api.start_activity(
                 robot_name=self.name, activity="dock", label=destination.dock)
             return
