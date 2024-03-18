@@ -41,26 +41,31 @@ def main(argv: list[str] | None = sys.argv) -> None:
         description="Configure delivery node for the fleet adapter")
     parser.add_argument("-c", "--config_file", type=str, required=True,
                         help="Path to the config.yaml file")
+    # TODO configからrobot_nameを取得するようにする
+    parser.add_argument("-r", "--robot_name", type=str, required=True,
+                        help="Name of the robot")
     args = parser.parse_args(args_without_ros[1:])
 
     config_path = args.config_file
+    robot_name = args.robot_name
     # get config path from rclpy
     # Parse the yaml in Python to get the fleet_manager info
     with open(config_path, "r") as f:
         config_yaml = yaml.safe_load(f)
     # Initialize robot API for this fleet
-    node = DeliveryNode(config_yaml)
+    node = DeliveryNode(config_yaml, robot_name)
     rclpy.spin(node)
     rclpy.shutdown()
 
 
 class DeliveryNode(Node):
-    def __init__(self, config_yaml: dict) -> None:
+    def __init__(self, config_yaml: dict, robot_name: str) -> None:
         super().__init__('delivery_node')
         self.docked = False
         self.config_yaml = config_yaml['fleet_manager']
         self.fleet_name = config_yaml['rmf_fleet']['name']
         self.get_logger().info(f"fleet name is {self.fleet_name}")
+        self.robot_name = robot_name
         self.robot_api = RobotAPI(self.config_yaml)
 
         # Subcribe to dispenser_requests
@@ -100,7 +105,7 @@ class DeliveryNode(Node):
         self.get_logger().info("Received dispenser request")
         if not self.docked:
             pub_msg = DispenserResult()
-            if self.start_action("pickup"):
+            if self.start_action(action="pickup", robot_name=self.robot_name):
                 pub_msg.status = DispenserResult.SUCCESS
                 self.docked = True
             else:
@@ -123,7 +128,7 @@ class DeliveryNode(Node):
         self.get_logger().info("Received ingestor request")
         if self.docked:
             pub_msg = IngestorResult()
-            if self.start_action("dropoff"):
+            if self.start_action(action="dropoff", robot_name=self.robot_name):
                 pub_msg.status = IngestorResult.SUCCESS
                 self.docked = False
             else:
@@ -141,20 +146,20 @@ class DeliveryNode(Node):
     def start_action(
         self,
         action: str,
+        robot_name: str
     ) -> bool:
         print(f"start action. {action}_command")
+        url = self.robot_api.prefix + f"kachaka/{robot_name}/command"
         if action == "pickup":
-            url = self.robot_api.prefix + "kachaka/dock_shelf"
-            shelf = {"title": ""}
+            payload = {"command": "dock_shelf", 'args': {}}
 
         elif action == "dropoff":
-            url = self.robot_api.prefix + "kachaka/undock_shelf"
-            shelf = {"title": ""}
+            payload = {"command": "dock_shelf", 'args': {}}
         else:
             return False
         try:
             # TODO 成否を問う。成功したらTrueを返すようにする。
-            response = requests.post(url, json=shelf)
+            response = requests.post(url, json=payload)
             self.task_id = response.json()["id"]
             if response.status_code == 200:
                 while self.completed_action() is False:

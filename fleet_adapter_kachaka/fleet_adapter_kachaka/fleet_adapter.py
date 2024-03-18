@@ -208,7 +208,7 @@ class RobotAdapter:
     def update(self, state: rmf_easy.RobotState) -> None:
         activity_identifier = None
         if self.execution:
-            if self.api.is_command_completed():
+            if self.api.is_command_completed(self.name):
                 self.execution.finished()
                 self.execution = None
             else:
