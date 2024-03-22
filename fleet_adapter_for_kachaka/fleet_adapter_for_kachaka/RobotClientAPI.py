@@ -2,7 +2,6 @@
 # -*- encoding: utf-8 -*-
 
 import requests
-import time
 
 # Copyright 2021 Open Source Robotics Foundation, Inc.
 #
@@ -19,23 +18,10 @@ import time
 # limitations under the License.
 
 
-'''
-    The RobotAPI class is a wrapper for API calls to the robot. Here users
-    are expected to fill up the implementations of functions which will be used
-    by the RobotCommandHandle. For example, if your robot has a REST API, you
-    will need to make http request calls to the appropriate endpoints within
-    these functions.
-'''
-
-
 class RobotUpdateData:
-    ''' Update data for a single robot. '''
+    """Update data for a single robot."""
 
-    def __init__(self,
-                 robot_name: str,
-                 map: str,
-                 position: list[float],
-                 battery_soc: float,
+    def __init__(self, robot_name: str, map: str, position: list[float], battery_soc: float,
                  requires_replan: bool | None = None) -> None:
         self.robot_name = robot_name
         self.position = position
@@ -45,9 +31,8 @@ class RobotUpdateData:
 
 
 class RobotAPI:
-    # The constructor below accepts parameters typically required to submit
-    # http requests. Users should modify the constructor as per the
-    # requirements of their robot's API
+    """Wrapper for API calls to the robot."""
+
     def __init__(self, config_yaml: dict) -> None:
         self.prefix = config_yaml['prefix']
         self.user = config_yaml['user']
@@ -57,99 +42,63 @@ class RobotAPI:
         self.task_id = ""
 
     def check_connection(self) -> bool:
-        ''' Return True if connection to the robot API server is successful '''
+        """Return True if connection to the robot API server is successful."""
         url = self.prefix + "kachaka/get_robot_serial_number"
         try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                return True
-            else:
-                return False
-        except Exception as e:
-            print(e)
+            response = requests.get(url, timeout=self.timeout)
+            return response.status_code == 200
+        except requests.RequestException:
             return False
 
-    def navigate(
-        self,
-        robot_name: str,
-        pose: list[float],
-        map_name: str,
-        speed_limit: float = 0.0
-    ) -> bool:
-        ''' Request the robot to navigate to pose:[x,y,theta] where x, y and
-            and theta are in the robot's coordinate convention. This function
-            should return True if the robot has accepted the request,
-            else False '''
+    def navigate(self, robot_name: str, pose: list[float], map_name: str, speed_limit: float = 0.0) -> bool:
+        """Request the robot to navigate to the specified pose."""
+        # Set linear velocity based on speed limit
+        linear_velocity = speed_limit if speed_limit > 0.0 else 1.0
+        velocity = {"linear": linear_velocity, "angular": 1.0}
+
         url = self.prefix + "kachaka/set_robot_velocity"
-        if speed_limit == 0.0 or speed_limit is None:
-            velocity = {"linear": 1.0, "angular": 1.0}
-        else:
-            velocity = {"linear": speed_limit, "angular": 1.0}
-        response = requests.post(url, json=velocity)
+        requests.post(url, json=velocity)
 
         url = self.prefix + "kachaka/move_to_pose"
         position = {"x": pose[0], "y": pose[1], "yaw": pose[2]}
         try:
             response = requests.post(url, json=position)
             self.task_id = response.json()['id']
-            if response.status_code == 200:
-                return True
-            else:
-                return False
-        except Exception as e:
-            print(e)
+            return response.status_code == 200
+        except requests.RequestException as e:
+            print(f"Error in navigate request: {e}")
             return False
 
-    def start_activity(
-        self,
-        robot_name: str,
-        activity: str,
-        label: str
-    ) -> bool:
-        ''' Request the robot to begin a process. This is specific to the robot
-        and the use case. For example, load/unload a cart for Deliverybot
-        or begin cleaning a zone for a cleaning robot.
-        Return True if process has started/is queued successfully, else
-        return False '''
-        if activity == "dock":
-            url = self.prefix + "kachaka/return_home"
-            payload = {}
-        else:
+    def start_activity(self, robot_name: str, activity: str, label: str) -> bool:
+        """Request the robot to begin a specified activity."""
+        if activity != "dock":
             return False
+
+        url = self.prefix + "kachaka/return_home"
         try:
-            response = requests.post(url, json=payload)
+            response = requests.post(url, json={})
             self.task_id = response.json()['id']
-            if response.status_code == 200:
-                return True
-            else:
-                print(f"{response.status_code} error, {response.json()}")
-                return False
-        except Exception as e:
-            print(e)
+            return response.status_code == 200
+        except requests.RequestException as e:
+            print(f"Error starting activity: {e}")
             return False
 
     def get_task_id(self) -> str:
+        """Get the ID of the current task."""
         return self.task_id
 
     def stop(self, robot_name: str) -> bool:
-        ''' Command the robot to stop.
-            Return True if robot has successfully stopped. Else False. '''
+        """Command the robot to stop."""
         url = self.prefix + "kachaka/cancel_command"
         try:
-
             response = requests.get(url)
-            res = response.json()
-            if res['success']:
-                return True
-            else:
-                return False
-        except Exception as e:
-            print(e)
+            return response.json()['success']
+        except requests.RequestException as e:
+            print(f"Error stopping robot: {e}")
             return False
 
     def position(self, robot_name: str) -> list[float] | None:
-        ''' Return [x, y, theta] expressed in the robot's coordinate frame or
-        None if any errors are encountered '''
+        """Return the current position of the robot."""
         url = self.prefix + "kachaka/get_robot_pose"
         try:
             response = requests.get(url)
@@ -158,70 +107,59 @@ class RobotAPI:
                 return [res['x'], res['y'], res['theta']]
             else:
                 return None
-        except Exception as e:
-            print(e)
+        except requests.RequestException as e:
+            print(f"Error getting robot position: {e}")
             return None
 
     def battery_soc(self, robot_name: str) -> float | None:
-        ''' Return the state of charge of the robot as a value between 0.0
-        and 1.0. Else return None if any errors are encountered. '''
-        # Now submit a request to make API
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
-        # TODO: The battery_soc is not implemented in the API
+        # TODO: Implement battery_soc in the robot API
         return 0.8
 
     def map(self, robot_name: str) -> str | None:
-        ''' Return the name of the map that the robot is currently on or
-        None if any errors are encountered. '''
-        url = self.prefix + "kachaka/get_map_list"
+        """Return the name of the map the robot is currently on."""
         try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                map_list = response.json()
-            else:
+            map_list_url = self.prefix + "kachaka/get_map_list"
+            map_list_response = requests.get(map_list_url)
+
+            if map_list_response.status_code != 200:
                 return None
-        except Exception as e:
-            print(e)
-            return None
-        if map_list is None:
-            return None
-        url = self.prefix + "kachaka/get_current_map_id"
-        try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                serach_id = response.json()
-                map_name = next(
-                    (item for item in map_list if item["id"] == serach_id), {'name': "L1"})
-                # return map_name['name']
-                return "L1"
-            else:
+
+            map_list = map_list_response.json()
+            if not map_list:
                 return None
-        except Exception as e:
-            print(e)
+
+            current_map_url = self.prefix + "kachaka/get_current_map_id"
+            current_map_response = requests.get(current_map_url)
+
+            if current_map_response.status_code != 200:
+                return None
+
+            current_map_id = current_map_response.json()
+            current_map = next(
+                (m for m in map_list if m["id"] == current_map_id), None)
+
+            return current_map['name'] if current_map else "L1"
+        except requests.RequestException as e:
+            print(f"Error getting current map: {e}")
             return None
 
     def is_command_completed(self) -> bool:
-        ''' Return True if the robot has completed its last command, else
-        return False. '''
+        """Return True if the robot has completed its last command."""
         url = self.prefix + f"command_result?task_id={self.task_id}"
         try:
             response = requests.get(url)
-            if response.status_code == 200:
-                return True
-            else:
-                return False
-        except Exception as e:
-            print(e)
+            return response.status_code == 200
+        except requests.RequestException as e:
+            print(f"Error checking command status: {e}")
             return False
 
     def get_data(self, robot_name: str) -> RobotUpdateData | None:
-        ''' Returns a RobotUpdateData for one robot if a name is given. Otherwise
-        return a list of RobotUpdateData for all robots. '''
-        map = self.map(robot_name)
+        """Return RobotUpdateData for the specified robot."""
+        map_name = self.map(robot_name)
         position = self.position(robot_name)
         battery_soc = self.battery_soc(robot_name)
-        if not (map is None or position is None or battery_soc is None):
-            return RobotUpdateData(robot_name, map, position, battery_soc)
-        return None
+
+        if map_name is None or position is None or battery_soc is None:
+            return None
+
+        return RobotUpdateData(robot_name, map_name, position, battery_soc)
