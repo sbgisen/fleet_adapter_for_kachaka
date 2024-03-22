@@ -28,7 +28,7 @@ import requests
 
 
 class RobotUpdateData:
-    ''' Update data for a single robot. '''
+    """ Update data for a single robot. """
 
     def __init__(self,
                  robot_name: str,
@@ -44,9 +44,8 @@ class RobotUpdateData:
 
 
 class RobotAPI:
-    # The constructor below accepts parameters typically required to submit
-    # http requests. Users should modify the constructor as per the
-    # requirements of their robot's API
+    """ Provides methods for interacting with the robot fleet manager API. """
+
     def __init__(self, config_yaml: dict) -> None:
         self.prefix = config_yaml['prefix']
         self.user = config_yaml['user']
@@ -60,12 +59,9 @@ class RobotAPI:
         url = self.prefix + "kachaka/**"
         try:
             response = requests.get(url)
-            if response.status_code == 200:
-                return True
-            else:
-                return False
-        except Exception as e:
-            print(e)
+            return response.status_code == 200
+        except requests.exceptions.RequestException:
+            print("Connection error")
             return False
 
     def navigate(
@@ -75,32 +71,21 @@ class RobotAPI:
         map_name: str,
         speed_limit: float = 0.0
     ) -> bool:
-        ''' Request the robot to navigate to pose:[x,y,theta] where x, y and
-            and theta are in the robot's coordinate convention. This function
-            should return True if the robot has accepted the request,
-            else False '''
-        url = self.prefix + f"kachaka/{robot_name}/command"
-        if speed_limit == 0.0 or speed_limit is None:
-            velocity = {"linear": 1.0, "angular": 1.0}
-        else:
-            velocity = {"linear": speed_limit, "angular": 1.0}
-        self.delete_command_state(robot_name)
-        payload = {'method': 'set_robot_velocity', 'args': velocity}
-        response = requests.put(url, json=payload)
+        """Send navigation request to robot."""
+        url = f"{self.prefix}kachaka/{robot_name}/command"
 
-        position = {"x": pose[0], "y": pose[1], "yaw": pose[2]}
-        payload = {'method': 'move_to_pose', 'args': position}
-        try:
-            self.delete_command_state(robot_name)
-            response = requests.put(url, json=payload)
-            self.task_id = response.json()['id']
-            if response.status_code == 200:
-                return True
-            else:
-                return False
-        except Exception as e:
-            print(e)
-            return False
+        velocity = {'linear': speed_limit or 1.0, 'angular': 1.0}
+        self._delete_command_state(robot_name)
+        requests.put(
+            url, json={'method': 'set_robot_velocity', 'args': velocity})
+
+        position = {'x': pose[0], 'y': pose[1], 'yaw': pose[2]}
+        self._delete_command_state(robot_name)
+        response = requests.put(
+            url, json={'method': 'move_to_pose', 'args': position})
+
+        self.task_id = response.json()['id']
+        return response.status_code == 200
 
     def start_activity(
         self,
@@ -108,122 +93,77 @@ class RobotAPI:
         activity: str,
         label: str
     ) -> bool:
-        ''' Request the robot to begin a process. This is specific to the robot
-        and the use case. For example, load/unload a cart for Deliverybot
-        or begin cleaning a zone for a cleaning robot.
-        Return True if process has started/is queued successfully, else
-        return False '''
-        if activity == "dock":
-            url = self.prefix + f"kachaka/{robot_name}/command"
-            payload = {'method': 'return_home', 'args': {}}
-        else:
-            return False
-        try:
-            self.delete_command_state(robot_name)
-            response = requests.put(url, json=payload)
-            self.task_id = response.json()['id']
-            if response.status_code == 200:
-                return True
-            else:
-                print(f"{response.status_code} error, {response.json()}")
-                return False
-        except Exception as e:
-            print(e)
+        """Send activity request to robot."""
+        if activity != "dock":
             return False
 
-    def delete_command_state(self, robot_name: str) -> bool:
-        url = self.prefix + f"kachaka/{robot_name}/command_state"
-        try:
-            response = requests.delete(url)
-            if response.status_code == 200:
-                return True
-            else:
-                return False
-        except Exception as e:
-            return False
+        url = f"{self.prefix}kachaka/{robot_name}/command"
+        self._delete_command_state(robot_name)
+        response = requests.put(
+            url, json={'method': 'return_home', 'args': {}})
+        self.task_id = response.json()['id']
+        return response.status_code == 200
+
+    def _delete_command_state(self, robot_name: str) -> None:
+        """Clear existing command state for robot."""
+        url = f"{self.prefix}kachaka/{robot_name}/command_state"
+        requests.delete(url)
 
     def stop(self, robot_name: str) -> bool:
-        ''' Command the robot to stop.
-            Return True if robot has successfully stopped. Else False. '''
-        url = self.prefix + f"kachaka/{robot_name}/command"
-        try:
-            self.delete_command_state(robot_name)
-            pyload = {'method': 'cancel_command', 'args': {}}
-            response = requests.put(url, json=pyload)
-            res = response.json()
-            if res['success']:
-                return True
-            else:
-                return False
-        except Exception as e:
-            print(e)
-            return False
+        """Send stop request to robot."""
+        url = f"{self.prefix}kachaka/{robot_name}/command"
+        self._delete_command_state(robot_name)
+        response = requests.put(
+            url, json={'method': 'cancel_command', 'args': {}})
+        return response.json().get('success', False)
 
     def position(self, robot_name: str) -> list[float] | None:
-        ''' Return [x, y, theta] expressed in the robot's coordinate frame or
-        None if any errors are encountered '''
-        url = self.prefix + f"kachaka/{robot_name}/pose"
-        try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                res = response.json()
-                return [res[0]['value']['x'], res[0]['value']['y'], res[0]['value']['theta']]
-            else:
-                return None
-        except Exception as e:
-            print(e)
+        """Get current position of robot."""
+        url = f"{self.prefix}kachaka/{robot_name}/pose"
+        response = requests.get(url)
+        if response.status_code != 200:
             return None
 
+        data = response.json()[0]['value']
+        return [data['x'], data['y'], data['theta']]
+
     def battery_soc(self, robot_name: str) -> float | None:
+        """Get robot's battery state of charge. Not yet implemented."""
         ''' Return the state of charge of the robot as a value between 0.0
         and 1.0. Else return None if any errors are encountered. '''
-        # Now submit a request to make API
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
         # TODO: The battery_soc is not implemented in the API
         return 0.8
 
     def map(self, robot_name: str) -> str | None:
-        ''' Return the name of the map that the robot is currently on or
-        None if any errors are encountered. '''
-        url = self.prefix + f"kachaka/{robot_name}/map_name"
-        try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                map_name = data[0]['value']
-                return "L1" 
-            else:
-                return None
-        except Exception as e:
-            print(e)
+        """Get name of map the robot is currently on."""
+        url = f"{self.prefix}kachaka/{robot_name}/map_name"
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            map_name = data[0]['value']
+            return "L1"
+        else:
             return None
 
     def is_command_completed(self, robot_name: str) -> bool:
-        ''' Return True if the robot has completed its last command, else
-        return False. '''
-        url = self.prefix + f"kachaka/{robot_name}/command_state"
-        try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                if data[0]['value'][0] == 1: # CommandState 1 is waiting for requests.
-                    return True
-                else:
-                    return False
-            else:
-                return False
-        except Exception as e:
-            print(e)
+        """Check if robot's last command has finished executing."""
+        url = f"{self.prefix}kachaka/{robot_name}/command_state"
+        response = requests.get(url)
+        if response.status_code != 200:
             return False
 
+        state = response.json()[0]['value'][0]  # 1: waiting for requests
+        return state == 1
+
     def get_data(self, robot_name: str) -> RobotUpdateData | None:
-        ''' Returns a RobotUpdateData for one robot if a name is given. Otherwise
-        return a list of RobotUpdateData for all robots. '''
+        """Get update data for the specified robot.
+
+        Returns:
+            RobotUpdateData object if successful, None if errors.
+        """
         map = self.map(robot_name)
         position = self.position(robot_name)
         battery_soc = self.battery_soc(robot_name)
-        if not (map is None or position is None or battery_soc is None):
-            return RobotUpdateData(robot_name, map, position, battery_soc)
-        return None
+        if map is None or position is None or battery_soc is None:
+            return None
+        return RobotUpdateData(robot_name, map, position, battery_soc)
