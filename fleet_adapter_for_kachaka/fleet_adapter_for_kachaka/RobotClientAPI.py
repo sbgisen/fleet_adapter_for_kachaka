@@ -19,7 +19,16 @@ import requests
 
 
 class RobotUpdateData:
-    """Update data for a single robot."""
+    """
+    Class representing update data for a single robot.
+
+    Attributes:
+        robot_name (str): The name of the robot.
+        map (str): The name of the map the robot is on.
+        position (list[float]): The position of the robot as [x, y, theta].
+        battery_soc (float): The state of charge of the robot's battery.
+        requires_replan (bool | None): Whether the robot requires replanning.
+    """
 
     def __init__(self, robot_name: str, map: str, position: list[float], battery_soc: float,
                  requires_replan: bool | None = None) -> None:
@@ -31,9 +40,25 @@ class RobotUpdateData:
 
 
 class RobotAPI:
-    """Wrapper for API calls to the robot."""
+    """
+    Class providing a wrapper for API calls to the robot.
+
+    Attributes:
+        prefix (str): The URL prefix for the robot API.
+        user (str): The username for authenticating with the robot API.
+        password (str): The password for authenticating with the robot API.
+        timeout (float): The timeout in seconds for API requests.
+        debug (bool): Whether to print debug information.
+        task_id (str): The ID of the current task.
+    """
 
     def __init__(self, config_yaml: dict) -> None:
+        """
+        Initialize a new RobotAPI instance.
+
+        Args:
+            config_yaml (dict): A dictionary containing configuration parameters.
+        """
         self.prefix = config_yaml['prefix']
         self.user = config_yaml['user']
         self.password = config_yaml['password']
@@ -42,7 +67,12 @@ class RobotAPI:
         self.task_id = ""
 
     def check_connection(self) -> bool:
-        """Return True if connection to the robot API server is successful."""
+        """
+        Check if the connection to the robot API server is successful.
+
+        Returns:
+            bool: True if the connection is successful, False otherwise.
+        """
         url = self.prefix + "kachaka/get_robot_serial_number"
         try:
             response = requests.get(url, timeout=self.timeout)
@@ -51,7 +81,18 @@ class RobotAPI:
             return False
 
     def navigate(self, robot_name: str, pose: list[float], map_name: str, speed_limit: float = 0.0) -> bool:
-        """Request the robot to navigate to the specified pose."""
+        """
+        Request the robot to navigate to the specified pose.
+
+        Args:
+            robot_name (str): The name of the robot.
+            pose (list[float]): The target pose as [x, y, theta].
+            map_name (str): The name of the map to navigate on.
+            speed_limit (float): The maximum speed for navigation. Default is 0.0.
+
+        Returns:
+            bool: True if the navigation request is successful, False otherwise.
+        """
         # Set linear velocity based on speed limit
         linear_velocity = speed_limit if speed_limit > 0.0 else 1.0
         velocity = {"linear": linear_velocity, "angular": 1.0}
@@ -70,7 +111,17 @@ class RobotAPI:
             return False
 
     def start_activity(self, robot_name: str, activity: str, label: str) -> bool:
-        """Request the robot to begin a specified activity."""
+        """
+        Request the robot to begin a specified activity.
+
+        Args:
+            robot_name (str): The name of the robot.
+            activity (str): The type of activity to start. Currently only supports "dock".
+            label (str): An optional label for the activity.
+
+        Returns:
+            bool: True if the activity request is successful, False otherwise.
+        """
         if activity != "dock":
             return False
 
@@ -84,11 +135,24 @@ class RobotAPI:
             return False
 
     def get_task_id(self) -> str:
-        """Get the ID of the current task."""
+        """
+        Get the ID of the current task.
+
+        Returns:
+            str: The ID of the current task.
+        """
         return self.task_id
 
     def stop(self, robot_name: str) -> bool:
-        """Command the robot to stop."""
+        """
+        Command the robot to stop.
+
+        Args:
+            robot_name (str): The name of the robot.
+
+        Returns:
+            bool: True if the stop command is successful, False otherwise.
+        """
         url = self.prefix + "kachaka/cancel_command"
         try:
             response = requests.get(url)
@@ -98,7 +162,15 @@ class RobotAPI:
             return False
 
     def position(self, robot_name: str) -> list[float] | None:
-        """Return the current position of the robot."""
+        """
+        Get the current position of the robot.
+
+        Args:
+            robot_name (str): The name of the robot.
+
+        Returns:
+            list[float] | None: The current position as [x, y, theta], or None if an error occurred.
+        """
         url = self.prefix + "kachaka/get_robot_pose"
         try:
             response = requests.get(url)
@@ -113,10 +185,30 @@ class RobotAPI:
 
     def battery_soc(self, robot_name: str) -> float | None:
         # TODO: Implement battery_soc in the robot API
+        """
+        Get the state of charge of the robot's battery.
+
+        Args:
+            robot_name (str): The name of the robot.
+
+        Returns:
+            float | None: The state of charge as a percentage between 0 and 100, or None if not available.
+
+        Notes:
+            - This method is not yet implemented in the robot API and always returns a placeholder value.
+        """
         return 0.8
 
     def map(self, robot_name: str) -> str | None:
-        """Return the name of the map the robot is currently on."""
+        """
+        Get the name of the map the robot is currently on.
+
+        Args:
+            robot_name (str): The name of the robot.
+
+        Returns:
+            str | None: The name of the current map, or None if an error occurred.
+        """
         try:
             map_list_url = self.prefix + "kachaka/get_map_list"
             map_list_response = requests.get(map_list_url)
@@ -144,7 +236,12 @@ class RobotAPI:
             return None
 
     def is_command_completed(self) -> bool:
-        """Return True if the robot has completed its last command."""
+        """
+        Check if the robot has completed its last command.
+
+        Returns:
+            bool: True if the last command has been completed, False otherwise.
+        """
         url = self.prefix + f"command_result?task_id={self.task_id}"
         try:
             response = requests.get(url)
@@ -154,7 +251,15 @@ class RobotAPI:
             return False
 
     def get_data(self, robot_name: str) -> RobotUpdateData | None:
-        """Return RobotUpdateData for the specified robot."""
+        """
+        Get the latest update data for the specified robot.
+
+        Args:
+            robot_name (str): The name of the robot.
+
+        Returns:
+            RobotUpdateData | None: The latest update data for the robot, or None if an error occurred.
+        """
         map_name = self.map(robot_name)
         position = self.position(robot_name)
         battery_soc = self.battery_soc(robot_name)
