@@ -9,7 +9,7 @@ rmf_fleet:
   profile: # Robot profile is modelled as a circle
     footprint: 0.3 # radius in m
     vicinity: 0.5 # radius in m
-  reversible: True # whether robots in this fleet can reverse
+  reversible: False # whether robots in this fleet can reverse
   battery_system:
     voltage: 12.0 # V
     capacity: 24.0 # Ahr
@@ -35,9 +35,9 @@ rmf_fleet:
   robots:
     kachaka_0:
       charger: "charge_station"
-        # yamllint disable-line rule:line-length
+      # yamllint disable-line rule:line-length
       responsive_wait: False # Should responsive wait be on/off for this specific robot? Overrides the fleet-wide setting.
-        # No mention of responsive_wait means the fleet-wide setting will be used
+      # No mention of responsive_wait means the fleet-wide setting will be used
 
   robot_state_update_frequency: 10.0 # Hz
 

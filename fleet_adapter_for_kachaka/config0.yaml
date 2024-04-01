@@ -9,7 +9,7 @@ rmf_fleet:
   profile: # Robot profile is modelled as a circle
     footprint: 0.3 # radius in m
     vicinity: 0.5 # radius in m
-  reversible: True # whether robots in this fleet can reverse
+  reversible: False # whether robots in this fleet can reverse
   battery_system:
     voltage: 12.0 # V
     capacity: 24.0 # Ahr
