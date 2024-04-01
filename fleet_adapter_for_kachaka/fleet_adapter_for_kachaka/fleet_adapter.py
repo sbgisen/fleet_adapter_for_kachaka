@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
+# Copyright (c) 2023 SoftBank Corp.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Copyright 2021 Open Source Robotics Foundation, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,7 +93,7 @@ def main(argv: list[str] = sys.argv) -> None:
     parser.add_argument("-sim", "--use_sim_time", action="store_true",
                         help='Use sim time, default: false')
     args = parser.parse_args(args_without_ros[1:])
-    print(f"Starting fleet adapter...")
+    print("Starting fleet adapter...")
 
     config_path = args.config_file
     nav_graph_path = args.nav_graph
@@ -177,7 +191,7 @@ class RobotAdapter:
     def __init__(
         self,
         name: str,
-        configuration,
+        configuration,  # noqa:ANN001
         node: rclpy.node.Node,
         api: RobotAPI,
         fleet_handle: EasyFullControl
@@ -253,8 +267,8 @@ class RobotAdapter:
 
 # Parallel processing solution derived from
 # https://stackoverflow.com/a/59385935
-def parallel(f):
-    def run_in_parallel(*args, **kwargs):
+def parallel(f):  # noqa:ANN001, ANN201
+    def run_in_parallel(*args, **kwargs):  # noqa:ANN201
         return asyncio.get_event_loop().run_in_executor(
             None, f, *args, **kwargs
         )
