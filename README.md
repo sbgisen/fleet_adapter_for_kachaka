@@ -9,17 +9,9 @@ The objective of this package is to serve as a reference or template for writing
 
 ## Step 1: Setup Kachaka
 
-Using [forked Kachaka-api](https://github.com/h-wata/kachaka-api/blob/feature/rest_api_wrapper/python/demos/url_kachaka_api.ipynb), run the REST API.
+Clone [kachaka-api-for-openrmf](https://github.com/sbgisen/kachaka-api-for-openrmf) and run the REST API.
 
-```bash
-export KACHAKA_IP=192.168.XX.YY
-ssh -p 26500 -l kachaka $KACHAKA_IP
-cd kachaka-api
-git remote add h-wata https://github.com:h-wata/feature/rest_api_wrapper
-git pull feature/rest_api_wrapper
-```
-
-Please run `python/demos/url_kachaka_api.ipynb` in Jupyter Notebook.
+> Note: Please refer to the [README.md](https://github.com/sbgisen/kachaka-api-for-openrmf/blob/main/README.md) to know how to run the REST API.
 
 ## Step 2: Update config.yaml
 The `config.yaml` file contains important parameters for setting up the fleet adapter. There are three broad sections to this file:
