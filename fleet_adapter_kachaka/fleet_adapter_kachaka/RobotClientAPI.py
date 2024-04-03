@@ -44,13 +44,13 @@ class RobotUpdateData:
         requires_replan (bool | None): Whether the robot requires replanning.
     """
 
-    def __init__(self, robot_name: str, map: str, position: list[float], battery_soc: float,
-                 requires_replan: bool | None = None) -> None:
+    def __init__(self, robot_name: str, map: str, position: list[float], battery_soc: float
+                 | None = None) -> None:
         self.robot_name = robot_name
         self.position = position
         self.map = map
         self.battery_soc = battery_soc
-        self.requires_replan = requires_replan
+        # self.requires_replan = requires_replan
 
 
 class RobotAPI:
