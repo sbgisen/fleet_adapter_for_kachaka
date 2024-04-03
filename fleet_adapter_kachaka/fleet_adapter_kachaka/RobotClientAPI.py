@@ -87,7 +87,7 @@ class RobotAPI:
         Returns:
             bool: True if the connection is successful, False otherwise.
         """
-        url = self.prefix + "kachaka/get_robot_serial_number"
+        url = self.prefix + "get_robot_serial_number"
         try:
             response = requests.get(url, timeout=self.timeout)
             return response.status_code == 200
@@ -107,22 +107,19 @@ class RobotAPI:
         Returns:
             bool: True if the navigation request is successful, False otherwise.
         """
-        # Set linear velocity based on speed limit
-        linear_velocity = speed_limit if speed_limit > 0.0 else 1.0
-        velocity = {"linear": linear_velocity, "angular": 1.0}
+        url = f"{self.prefix}{robot_name}/command"
+        velocity = {'linear': speed_limit or 1.0, 'angular': 1.0}
+        self._delete_command_state(robot_name)
+        requests.put(
+            url, json={'method': 'set_robot_velocity', 'args': velocity})
 
-        url = self.prefix + "kachaka/set_robot_velocity"
-        requests.post(url, json=velocity)
+        position = {'x': pose[0], 'y': pose[1], 'yaw': pose[2]}
+        self._delete_command_state(robot_name)
+        response = requests.put(
+            url, json={'method': 'move_to_pose', 'args': position})
 
-        url = self.prefix + "kachaka/move_to_pose"
-        position = {"x": pose[0], "y": pose[1], "yaw": pose[2]}
-        try:
-            response = requests.post(url, json=position)
-            self.task_id = response.json()['id']
-            return response.status_code == 200
-        except requests.RequestException as e:
-            print(f"Error in navigate request: {e}")
-            return False
+        self.task_id = response.json()['id']
+        return response.status_code == 200
 
     def start_activity(self, robot_name: str, activity: str, label: str) -> bool:
         """
@@ -139,14 +136,17 @@ class RobotAPI:
         if activity != "dock":
             return False
 
-        url = self.prefix + "kachaka/return_home"
-        try:
-            response = requests.post(url, json={})
-            self.task_id = response.json()['id']
-            return response.status_code == 200
-        except requests.RequestException as e:
-            print(f"Error starting activity: {e}")
-            return False
+        url = f"{self.prefix}{robot_name}/command"
+        self._delete_command_state(robot_name)
+        response = requests.put(
+            url, json={'method': 'return_home', 'args': {}})
+        self.task_id = response.json()['id']
+        return response.status_code == 200
+
+    def _delete_command_state(self, robot_name: str) -> None:
+        """Clear existing command state for robot."""
+        url = f"{self.prefix}{robot_name}/command_state"
+        requests.delete(url)
 
     def get_task_id(self) -> str:
         """
@@ -167,13 +167,11 @@ class RobotAPI:
         Returns:
             bool: True if the stop command is successful, False otherwise.
         """
-        url = self.prefix + "kachaka/cancel_command"
-        try:
-            response = requests.get(url)
-            return response.json()['success']
-        except requests.RequestException as e:
-            print(f"Error stopping robot: {e}")
-            return False
+        url = f"{self.prefix}{robot_name}/command"
+        self._delete_command_state(robot_name)
+        response = requests.put(
+            url, json={'method': 'cancel_command', 'args': {}})
+        return response.json().get('success', False)
 
     def position(self, robot_name: str) -> list[float] | None:
         """
@@ -185,17 +183,13 @@ class RobotAPI:
         Returns:
             list[float] | None: The current position as [x, y, theta], or None if an error occurred.
         """
-        url = self.prefix + "kachaka/get_robot_pose"
-        try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                res = response.json()
-                return [res['x'], res['y'], res['theta']]
-            else:
-                return None
-        except requests.RequestException as e:
-            print(f"Error getting robot position: {e}")
+        url = f"{self.prefix}{robot_name}/pose"
+        response = requests.get(url)
+        if response.status_code != 200:
             return None
+
+        data = response.json()[0]['value']
+        return [data['x'], data['y'], data['theta']]
 
     def battery_soc(self, robot_name: str) -> float | None:
         # TODO: Implement battery_soc in the robot API
@@ -211,6 +205,13 @@ class RobotAPI:
         Notes:
             - This method is not yet implemented in the robot API and always returns a placeholder value.
         """
+        url = f"{self.prefix}{robot_name}/pose"
+        response = requests.get(url)
+        if response.status_code != 200:
+            return None
+
+        data = response.json()[0]['value']
+        return data
         return 0.8
 
     def map(self, robot_name: str) -> str | None:
@@ -223,46 +224,29 @@ class RobotAPI:
         Returns:
             str | None: The name of the current map, or None if an error occurred.
         """
-        try:
-            map_list_url = self.prefix + "kachaka/get_map_list"
-            map_list_response = requests.get(map_list_url)
-
-            if map_list_response.status_code != 200:
-                return None
-
-            map_list = map_list_response.json()
-            if not map_list:
-                return None
-
-            current_map_url = self.prefix + "kachaka/get_current_map_id"
-            current_map_response = requests.get(current_map_url)
-
-            if current_map_response.status_code != 200:
-                return None
-
-            current_map_id = current_map_response.json()
-            current_map = next(
-                (m for m in map_list if m["id"] == current_map_id), None)
-
-            return current_map['name'] if current_map else "L1"
-        except requests.RequestException as e:
-            print(f"Error getting current map: {e}")
+        url = f"{self.prefix}{robot_name}/map_name"
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            map_name = data[0]['value']
+            return "L1"
+        else:
             return None
 
-    def is_command_completed(self) -> bool:
+    def is_command_completed(self, robot_name: str) -> bool:
         """
         Check if the robot has completed its last command.
 
         Returns:
             bool: True if the last command has been completed, False otherwise.
         """
-        url = self.prefix + f"command_result?task_id={self.task_id}"
-        try:
-            response = requests.get(url)
-            return response.status_code == 200
-        except requests.RequestException as e:
-            print(f"Error checking command status: {e}")
+        url = f"{self.prefix}{robot_name}/command_state"
+        response = requests.get(url)
+        if response.status_code != 200:
             return False
+
+        state = response.json()[0]['value'][0]  # 1: waiting for requests
+        return state == 1
 
     def get_data(self, robot_name: str) -> RobotUpdateData | None:
         """
@@ -280,5 +264,4 @@ class RobotAPI:
 
         if map_name is None or position is None or battery_soc is None:
             return None
-
         return RobotUpdateData(robot_name, map_name, position, battery_soc)
