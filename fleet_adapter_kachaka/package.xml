@@ -5,6 +5,7 @@
   <version>0.0.0</version>
   <description>An RMF fleet adapter for kachaka</description>
   <maintainer email="yadunund@openrobotics.org">Yadunund</maintainer>
+  <maintainer email="SBGRP-git@g.softbank.co.jp">SoftBank corp.</maintainer>
   <license>Apache License 2.0</license>
 
   <exec_depend>rmf_fleet_adapter_python</exec_depend>
