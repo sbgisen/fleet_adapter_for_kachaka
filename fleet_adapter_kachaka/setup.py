@@ -3,7 +3,7 @@ from glob import glob
 
 from setuptools import setup
 
-package_name = 'fleet_adapter_for_kachaka'
+package_name = 'fleet_adapter_kachaka'
 
 setup(
     name=package_name,
@@ -29,8 +29,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'fleet_adapter=fleet_adapter_for_kachaka.fleet_adapter:main',
-            'delivery_node=fleet_adapter_for_kachaka.delivery_node:main',
+            'fleet_adapter=fleet_adapter_kachaka.fleet_adapter:main',
+            'delivery_node=fleet_adapter_kachaka.delivery_node:main',
         ],
     },
 )
