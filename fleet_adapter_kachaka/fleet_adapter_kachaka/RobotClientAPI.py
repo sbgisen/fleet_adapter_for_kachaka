@@ -118,7 +118,7 @@ class RobotAPI:
         response = requests.put(
             url, json={'method': 'move_to_pose', 'args': position})
 
-        self.task_id = response.json()['id']
+        # self.task_id = response.json()['id']
         return response.status_code == 200
 
     def start_activity(self, robot_name: str, activity: str, label: str) -> bool:
@@ -140,7 +140,7 @@ class RobotAPI:
         self._delete_command_state(robot_name)
         response = requests.put(
             url, json={'method': 'return_home', 'args': {}})
-        self.task_id = response.json()['id']
+        # self.task_id = response.json()['id']
         return response.status_code == 200
 
     def _delete_command_state(self, robot_name: str) -> None:
@@ -205,13 +205,13 @@ class RobotAPI:
         Notes:
             - This method is not yet implemented in the robot API and always returns a placeholder value.
         """
-        url = f"{self.prefix}{robot_name}/pose"
+        url = f"{self.prefix}{robot_name}/battery"
         response = requests.get(url)
         if response.status_code != 200:
             return None
 
         data = response.json()[0]['value']
-        return data
+        # return data
         return 0.8
 
     def map(self, robot_name: str) -> str | None:
