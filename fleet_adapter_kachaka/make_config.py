@@ -58,29 +58,25 @@ while True:
     config['reference_coordinates'][level_name]['rmf'] = []
     config['reference_coordinates'][level_name]['robot'] = []
 
-    print(
-        f"Enter at least 4 RMF coordinates for {level_name} (enter 'q' to finish)")
+    print(f"Enter at least 4 RMF coordinates for level: {level_name} (enter 'q' to finish)")
+    count = 0
     while True:
         rmf_coord = get_user_input("RMF coordinate (e.g., 25.4962, -9.0341)")
         if rmf_coord == 'q':
             break
         rmf_x, rmf_y = map(float, rmf_coord.split(','))
-        config['reference_coordinates'][level_name]['rmf'].append([
-                                                                     rmf_x, rmf_y])
-
-    print(
-        f"Enter at least 4 robot coordinates for {level_name} (enter 'q' to finish)")
-    while True:
+        config['reference_coordinates'][level_name]['rmf'].append([rmf_x, rmf_y])
+        count += 1
+    print(f"Enter the same number of robot coordinates for {level_name} (enter 'q' to finish)")
+    while count > 0:
         robot_coord = get_user_input("Robot coordinate (e.g., 0.679, 1.447)")
-        if robot_coord == 'q':
-            break
         try:
             robot_x, robot_y = map(float, robot_coord.split(','))
         except ValueError:
             print("Invalid input. Please try again.")
             continue
-        config['reference_coordinates'][level_name]['robot'].append([
-                                                                       robot_x, robot_y])
+        config['reference_coordinates'][level_name]['robot'].append([robot_x, robot_y])
+        count -= 1
 
 while True:
     # Get the output file name
