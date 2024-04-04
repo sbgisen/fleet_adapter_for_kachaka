@@ -48,7 +48,6 @@ setup(
     entry_points={
         'console_scripts': [
             'fleet_adapter=fleet_adapter_kachaka.fleet_adapter:main',
-            'delivery_node=fleet_adapter_kachaka.delivery_node:main',
         ],
     },
 )

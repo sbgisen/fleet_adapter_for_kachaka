@@ -11,9 +11,4 @@
     <param name="server_uri" value="$(var server_uri)"/>
   </node>
 
-  <!-- delivery_node -->
-  <node pkg="fleet_adapter_kachaka" exec="delivery_node" args="-c $(var config_file)" output="both">
-    <param name="robot_name" value="$(var robot_name)"/>
-  </node>
-
 </launch>
