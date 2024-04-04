@@ -89,7 +89,7 @@ while True:
     try:
         # Write the configuration to the YAML file
         with open(output_file, 'w') as file:
-            yaml.dump(config, file)
+            yaml.safe_dump(config, file)
         break
     except (FileNotFoundError, PermissionError) as e:
         print(f"Error: {e}. Please try again.")
