@@ -50,26 +50,26 @@ config['fleet_manager']['password'] = getpass.getpass(
 # Configure reference_coordinates
 config['reference_coordinates'] = {}
 while True:
-    location_name = get_user_input(
-        "Location name for coordinates (enter 'q' to finish)")
-    if location_name == 'q':
+    level_name = get_user_input(
+        "Level name for coordinates (enter 'q' to finish)")
+    if level_name == 'q':
         break
-    config['reference_coordinates'][location_name] = {}
-    config['reference_coordinates'][location_name]['rmf'] = []
-    config['reference_coordinates'][location_name]['robot'] = []
+    config['reference_coordinates'][level_name] = {}
+    config['reference_coordinates'][level_name]['rmf'] = []
+    config['reference_coordinates'][level_name]['robot'] = []
 
     print(
-        f"Enter at least 4 RMF coordinates for {location_name} (enter 'q' to finish)")
+        f"Enter at least 4 RMF coordinates for {level_name} (enter 'q' to finish)")
     while True:
         rmf_coord = get_user_input("RMF coordinate (e.g., 25.4962, -9.0341)")
         if rmf_coord == 'q':
             break
         rmf_x, rmf_y = map(float, rmf_coord.split(','))
-        config['reference_coordinates'][location_name]['rmf'].append([
+        config['reference_coordinates'][level_name]['rmf'].append([
                                                                      rmf_x, rmf_y])
 
     print(
-        f"Enter at least 4 robot coordinates for {location_name} (enter 'q' to finish)")
+        f"Enter at least 4 robot coordinates for {level_name} (enter 'q' to finish)")
     while True:
         robot_coord = get_user_input("Robot coordinate (e.g., 0.679, 1.447)")
         if robot_coord == 'q':
@@ -79,7 +79,7 @@ while True:
         except ValueError:
             print("Invalid input. Please try again.")
             continue
-        config['reference_coordinates'][location_name]['robot'].append([
+        config['reference_coordinates'][level_name]['robot'].append([
                                                                        robot_x, robot_y])
 
 while True:
