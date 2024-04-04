@@ -74,7 +74,11 @@ while True:
         robot_coord = get_user_input("Robot coordinate (e.g., 0.679, 1.447)")
         if robot_coord == 'q':
             break
-        robot_x, robot_y = map(float, robot_coord.split(','))
+        try:
+            robot_x, robot_y = map(float, robot_coord.split(','))
+        except ValueError:
+            print("Invalid input. Please try again.")
+            continue
         config['reference_coordinates'][location_name]['robot'].append([
                                                                        robot_x, robot_y])
 
