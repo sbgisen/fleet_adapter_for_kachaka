@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import getpass
+
 import yaml
 
 
@@ -27,8 +29,15 @@ def get_user_input(prompt: str, default: str = None) -> str:
 
 
 # Load the existing config_template.yaml
-with open('config_template.yaml', 'r') as file:
-    config = yaml.safe_load(file)
+try:
+    with open('config_template.yaml', 'r') as file:
+        config = yaml.safe_load(file)
+except yaml.YAMLError as exc:
+    print(f"Error loading YAML file: {exc}")
+    exit(1)
+except FileNotFoundError:
+    print("config_template.yaml not found. Try running this script from the correct directory.")
+    exit(1)
 
 # Configure fleet_manager
 config['fleet_manager'] = {}
@@ -36,46 +45,51 @@ config['fleet_manager']['prefix'] = get_user_input(
     "Fleet Manager prefix", "http://192.168.1.100:26502/")
 config['fleet_manager']['user'] = get_user_input(
     "Fleet Manager username", "some_user")
-config['fleet_manager']['password'] = get_user_input(
-    "Fleet Manager password", "some_password")
-
+config['fleet_manager']['password'] = getpass.getpass(
+    "Fleet Manager password (default: some_password): ") or "some_password"
 # Configure reference_coordinates
 config['reference_coordinates'] = {}
 while True:
-    location_name = get_user_input(
-        "Location name for coordinates (enter 'q' to finish)")
-    if location_name == 'q':
+    level_name = get_user_input(
+        "Level name for coordinates (enter 'q' to finish)")
+    if level_name == 'q':
         break
-    config['reference_coordinates'][location_name] = {}
-    config['reference_coordinates'][location_name]['rmf'] = []
-    config['reference_coordinates'][location_name]['robot'] = []
-
-    print(
-        f"Enter at least 4 RMF coordinates for {location_name} (enter 'q' to finish)")
+    config['reference_coordinates'][level_name] = {}
+    config['reference_coordinates'][level_name]['rmf'] = []
+    config['reference_coordinates'][level_name]['robot'] = []
+    print(f"RMF coordinates for level: {level_name} (at least 2 required, 4 recommended) (enter 'q' to finish)")
+    count = 0
     while True:
         rmf_coord = get_user_input("RMF coordinate (e.g., 25.4962, -9.0341)")
         if rmf_coord == 'q':
+            if count < 2:
+                print("Please enter at least 2 RMF coordinates.")
+                continue
             break
         rmf_x, rmf_y = map(float, rmf_coord.split(','))
-        config['reference_coordinates'][location_name]['rmf'].append([
-                                                                     rmf_x, rmf_y])
-
-    print(
-        f"Enter at least 4 robot coordinates for {location_name} (enter 'q' to finish)")
-    while True:
+        config['reference_coordinates'][level_name]['rmf'].append([rmf_x, rmf_y])
+        count += 1
+    print(f"Robot coordinates for level: {level_name} (same number as RMF coordinates required)")
+    while count > 0:
         robot_coord = get_user_input("Robot coordinate (e.g., 0.679, 1.447)")
-        if robot_coord == 'q':
-            break
-        robot_x, robot_y = map(float, robot_coord.split(','))
-        config['reference_coordinates'][location_name]['robot'].append([
-                                                                       robot_x, robot_y])
+        try:
+            robot_x, robot_y = map(float, robot_coord.split(','))
+        except ValueError:
+            print("Invalid input. Please try again.")
+            continue
+        config['reference_coordinates'][level_name]['robot'].append([robot_x, robot_y])
+        count -= 1
 
-# Get the output file name
-output_file = get_user_input(
-    "Enter the output file name (e.g., config_custom.yaml)")
-
-# Write the configuration to the YAML file
-with open(output_file, 'w') as file:
-    yaml.dump(config, file)
+while True:
+    # Get the output file name
+    output_file = get_user_input(
+        "Enter the output file name (e.g., config_custom.yaml)", "config_custom.yaml")
+    try:
+        # Write the configuration to the YAML file
+        with open(output_file, 'w') as file:
+            yaml.safe_dump(config, file)
+        break
+    except (FileNotFoundError, PermissionError) as e:
+        print(f"Error: {e}. Please try again.")
 
 print(f"Configuration completed. Please check the {output_file} file.")
