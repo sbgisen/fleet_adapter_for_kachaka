@@ -57,17 +57,19 @@ while True:
     config['reference_coordinates'][level_name] = {}
     config['reference_coordinates'][level_name]['rmf'] = []
     config['reference_coordinates'][level_name]['robot'] = []
-
-    print(f"Enter at least 4 RMF coordinates for level: {level_name} (enter 'q' to finish)")
+    print(f"RMF coordinates for level: {level_name} (at least 2 required, 4 recommended) (enter 'q' to finish)")
     count = 0
     while True:
         rmf_coord = get_user_input("RMF coordinate (e.g., 25.4962, -9.0341)")
         if rmf_coord == 'q':
+            if count < 2:
+                print("Please enter at least 2 RMF coordinates.")
+                continue
             break
         rmf_x, rmf_y = map(float, rmf_coord.split(','))
         config['reference_coordinates'][level_name]['rmf'].append([rmf_x, rmf_y])
         count += 1
-    print(f"Enter the same number of robot coordinates for {level_name} (enter 'q' to finish)")
+    print(f"Robot coordinates for level: {level_name} (same number as RMF coordinates required)")
     while count > 0:
         robot_coord = get_user_input("Robot coordinate (e.g., 0.679, 1.447)")
         try:
