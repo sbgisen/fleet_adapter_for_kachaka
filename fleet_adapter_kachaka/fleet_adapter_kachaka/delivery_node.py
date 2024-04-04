@@ -63,7 +63,7 @@ class DeliveryNode(Node):
         self.get_logger().info(f"fleet name is {self.fleet_name}")
         self.robot_api = RobotAPI(self.config_yaml)
 
-        # Subcribe to dispenser_requests
+        # Subscribe to dispenser_requests
         self.dispenser_request_sub = self.create_subscription(
             DispenserRequest,
             'dispenser_requests',
@@ -71,7 +71,7 @@ class DeliveryNode(Node):
             10
         )
 
-        # publish to despenser reaults
+        # publish to dispenser results
         self.dispenser_result_pub = self.create_publisher(
             DispenserResult,
             'dispenser_results',
@@ -132,7 +132,7 @@ class DeliveryNode(Node):
             pub_msg.time = self.get_clock().now().to_msg()
             pub_msg.request_guid = msg.request_guid
             pub_msg.source_guid = msg.target_guid
-            self.get_logger().info("Sending ingesto result")
+            self.get_logger().info("Sending ingestor result")
             self.ingestor_result_pub.publish(pub_msg)
         else:
             self.get_logger().info("Not docked. Cannot dropoff")
