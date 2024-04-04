@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import getpass
+
 import yaml
 
 
@@ -43,9 +45,8 @@ config['fleet_manager']['prefix'] = get_user_input(
     "Fleet Manager prefix", "http://192.168.1.100:26502/")
 config['fleet_manager']['user'] = get_user_input(
     "Fleet Manager username", "some_user")
-config['fleet_manager']['password'] = get_user_input(
-    "Fleet Manager password", "some_password")
-
+config['fleet_manager']['password'] = getpass.getpass(
+    "Fleet Manager password (default: some_password): ") or "some_password"
 # Configure reference_coordinates
 config['reference_coordinates'] = {}
 while True:
