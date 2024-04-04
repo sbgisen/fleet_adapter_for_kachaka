@@ -27,8 +27,15 @@ def get_user_input(prompt: str, default: str = None) -> str:
 
 
 # Load the existing config_template.yaml
-with open('config_template.yaml', 'r') as file:
-    config = yaml.safe_load(file)
+try:
+    with open('config_template.yaml', 'r') as file:
+        config = yaml.safe_load(file)
+except yaml.YAMLError as exc:
+    print(f"Error loading YAML file: {exc}")
+    exit(1)
+except FileNotFoundError:
+    print("config_template.yaml not found. Try running this script from the correct directory.")
+    exit(1)
 
 # Configure fleet_manager
 config['fleet_manager'] = {}
@@ -70,12 +77,16 @@ while True:
         config['reference_coordinates'][location_name]['robot'].append([
                                                                        robot_x, robot_y])
 
-# Get the output file name
-output_file = get_user_input(
-    "Enter the output file name (e.g., config_custom.yaml)")
-
-# Write the configuration to the YAML file
-with open(output_file, 'w') as file:
-    yaml.dump(config, file)
+while True:
+    # Get the output file name
+    output_file = get_user_input(
+        "Enter the output file name (e.g., config_custom.yaml)", "config_custom.yaml")
+    try:
+        # Write the configuration to the YAML file
+        with open(output_file, 'w') as file:
+            yaml.dump(config, file)
+        break
+    except (FileNotFoundError, PermissionError) as e:
+        print(f"Error: {e}. Please try again.")
 
 print(f"Configuration completed. Please check the {output_file} file.")
