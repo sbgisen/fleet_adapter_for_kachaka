@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- encoding: utf-8 -*-
+
+# Copyright (c) 2023 SoftBank Corp.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Copyright 2021 Open Source Robotics Foundation, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +29,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import argparse
-import yaml
-import time
-import threading
 import asyncio
-import nudged
+import sys
+import threading
+import time
 
+import nudged
 import rclpy
 import rclpy.node
-from rclpy.parameter import Parameter
-from rclpy.duration import Duration
-
 import rmf_adapter
-from rmf_adapter import Adapter
 import rmf_adapter.easy_full_control as rmf_easy
+import yaml
+from rclpy.duration import Duration
+from rclpy.parameter import Parameter
+from rmf_adapter import Adapter
+from rmf_adapter import EasyFullControl
 from rmf_adapter import Transformation
 
 from .RobotClientAPI import RobotAPI
@@ -36,7 +53,7 @@ from .RobotClientAPI import RobotAPI
 # ------------------------------------------------------------------------------
 # Helper functions
 # ------------------------------------------------------------------------------
-def compute_transforms(level, coords, node=None):
+def compute_transforms(level: str, coords: dict, node: rclpy.node.Node | None = None) -> Transformation:
     """Get transforms between RMF and robot coordinates."""
     rmf_coords = coords['rmf']
     robot_coords = coords['robot']
@@ -56,7 +73,9 @@ def compute_transforms(level, coords, node=None):
 # ------------------------------------------------------------------------------
 # Main
 # ------------------------------------------------------------------------------
-def main(argv=sys.argv):
+
+
+def main(argv: list[str] = sys.argv) -> None:
     # Init rclpy and adapter
     rclpy.init(args=argv)
     rmf_adapter.init_rclcpp()
@@ -74,7 +93,7 @@ def main(argv=sys.argv):
     parser.add_argument("-sim", "--use_sim_time", action="store_true",
                         help='Use sim time, default: false')
     args = parser.parse_args(args_without_ros[1:])
-    print(f"Starting fleet adapter...")
+    print("Starting fleet adapter...")
 
     config_path = args.config_file
     nav_graph_path = args.nav_graph
@@ -112,13 +131,13 @@ def main(argv=sys.argv):
         server_uri = args.server_uri
 
     fleet_config.server_uri = server_uri
-    fleet_handle = adapter.add_easy_fleet(fleet_config)
 
     # Configure the transforms between robot and RMF frames
     for level, coords in config_yaml['reference_coordinates'].items():
         tf = compute_transforms(level, coords, node)
         fleet_config.add_robot_coordinates_transformation(level, tf)
 
+    fleet_handle = adapter.add_easy_fleet(fleet_config)
     # Initialize robot API for this fleet
     fleet_mgr_yaml = config_yaml['fleet_manager']
     api = RobotAPI(fleet_mgr_yaml)
@@ -130,11 +149,11 @@ def main(argv=sys.argv):
             robot_name, robot_config, node, api, fleet_handle
         )
 
-    update_period = 1.0/config_yaml['rmf_fleet'].get(
+    update_period = 1.0 / config_yaml['rmf_fleet'].get(
         'robot_state_update_frequency', 10.0
     )
 
-    def update_loop():
+    def update_loop() -> None:
         asyncio.set_event_loop(asyncio.new_event_loop())
         while rclpy.ok():
             now = node.get_clock().now()
@@ -148,7 +167,7 @@ def main(argv=sys.argv):
                 asyncio.wait(update_jobs)
             )
 
-            next_wakeup = now + Duration(nanoseconds=update_period*1e9)
+            next_wakeup = now + Duration(nanoseconds=update_period * 1e9)
             while node.get_clock().now() < next_wakeup:
                 time.sleep(0.001)
 
@@ -172,11 +191,11 @@ class RobotAdapter:
     def __init__(
         self,
         name: str,
-        configuration,
-        node,
+        configuration,  # noqa:ANN001
+        node: rclpy.node.Node,
         api: RobotAPI,
-        fleet_handle
-    ):
+        fleet_handle: EasyFullControl
+    ) -> None:
         self.name = name
         self.execution = None
         self.update_handle = None
@@ -184,8 +203,9 @@ class RobotAdapter:
         self.node = node
         self.api = api
         self.fleet_handle = fleet_handle
+        self.charge_station = self.configuration.compatible_chargers[0]
 
-    def update(self, state):
+    def update(self, state: rmf_easy.RobotState) -> None:
         activity_identifier = None
         if self.execution:
             if self.api.is_command_completed():
@@ -196,7 +216,7 @@ class RobotAdapter:
 
         self.update_handle.update(state, activity_identifier)
 
-    def make_callbacks(self):
+    def make_callbacks(self) -> rmf_easy.RobotCallbacks:
         return rmf_easy.RobotCallbacks(
             lambda destination, execution: self.navigate(
                 destination, execution
@@ -207,13 +227,16 @@ class RobotAdapter:
             )
         )
 
-    def navigate(self, destination, execution):
+    def navigate(self, destination: rmf_easy.Destination, execution: rmf_easy.CommandExecution) -> None:
         self.execution = execution
         self.node.get_logger().info(
             f'Commanding [{self.name}] to navigate to {destination.position} '
             f'on map [{destination.map}]'
         )
-
+        if destination.dock == self.charge_station:
+            self.api.start_activity(
+                robot_name=self.name, activity="dock", label=destination.dock)
+            return
         self.api.navigate(
             self.name,
             destination.position,
@@ -221,17 +244,21 @@ class RobotAdapter:
             destination.speed_limit
         )
 
-    def stop(self, activity):
+    def stop(self, activity: rmf_easy.CommandExecution.identifier) -> None:
         if self.execution is not None:
             if self.execution.identifier.is_same(activity):
                 self.execution = None
                 self.stop(self.name)
 
-    def execute_action(self, category: str, description: dict, execution):
+    def execute_action(self, category: str, description: dict, execution: rmf_easy.CommandExecution) -> None:
         ''' Trigger a custom action you would like your robot to perform.
         You may wish to use RobotAPI.start_activity to trigger different
         types of actions to your robot.'''
         self.execution = execution
+        self.node.get_logger().info(
+            f"Executing action: {category} "
+        )
+        self.api.start_activity(self.name, category, "")
         # ------------------------ #
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
@@ -240,8 +267,8 @@ class RobotAdapter:
 
 # Parallel processing solution derived from
 # https://stackoverflow.com/a/59385935
-def parallel(f):
-    def run_in_parallel(*args, **kwargs):
+def parallel(f):  # noqa:ANN001, ANN201
+    def run_in_parallel(*args, **kwargs):  # noqa:ANN201
         return asyncio.get_event_loop().run_in_executor(
             None, f, *args, **kwargs
         )
@@ -250,7 +277,7 @@ def parallel(f):
 
 
 @parallel
-def update_robot(robot: RobotAdapter):
+def update_robot(robot: RobotAdapter) -> None:
     data = robot.api.get_data(robot.name)
     if data is None:
         return
