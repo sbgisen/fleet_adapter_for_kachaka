@@ -170,7 +170,7 @@ class RobotAPI:
         url = self.prefix + "kachaka/cancel_command"
         try:
             response = requests.get(url)
-            return response.json()['success']
+            return response.json()['cancel_command']['success']
         except requests.RequestException as e:
             print(f"Error stopping robot: {e}")
             return False
@@ -189,7 +189,7 @@ class RobotAPI:
         try:
             response = requests.get(url)
             if response.status_code == 200:
-                res = response.json()
+                res = response.json()['get_robot_pose']
                 return [res['x'], res['y'], res['theta']]
             else:
                 return None
@@ -224,13 +224,12 @@ class RobotAPI:
             str | None: The name of the current map, or None if an error occurred.
         """
         try:
-            map_list_url = self.prefix + "kachaka/get_map_list"
-            map_list_response = requests.get(map_list_url)
+            map_list_response = requests.get(self.prefix + "kachaka/get_map_list")
 
             if map_list_response.status_code != 200:
                 return None
 
-            map_list = map_list_response.json()
+            map_list = map_list_response.json()['get_map_list']
             if not map_list:
                 return None
 
@@ -240,7 +239,7 @@ class RobotAPI:
             if current_map_response.status_code != 200:
                 return None
 
-            current_map_id = current_map_response.json()
+            current_map_id = current_map_response.json()['get_current_map_id']
             current_map = next(
                 (m for m in map_list if m["id"] == current_map_id), None)
 
