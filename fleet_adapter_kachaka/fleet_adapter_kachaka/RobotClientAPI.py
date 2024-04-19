@@ -29,6 +29,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
+
 import requests
 
 
@@ -94,7 +96,7 @@ class RobotAPI:
         except requests.RequestException:
             return False
 
-    def navigate(self, robot_name: str, pose: list[float], map_name: str, speed_limit: float = 0.0) -> bool:
+    def navigate(self, robot_name: str, pose: list[float], map_name: str, speed_limit: Optional[float] = None) -> bool:
         """
         Request the robot to navigate to the specified pose.
 
