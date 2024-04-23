@@ -29,6 +29,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
+
 import requests
 
 
@@ -94,7 +96,7 @@ class RobotAPI:
         except requests.RequestException:
             return False
 
-    def navigate(self, robot_name: str, pose: list[float], map_name: str, speed_limit: float = 0.0) -> bool:
+    def navigate(self, robot_name: str, pose: list[float], map_name: str, speed_limit: Optional[float] = None) -> bool:
         """
         Request the robot to navigate to the specified pose.
 
@@ -108,11 +110,12 @@ class RobotAPI:
             bool: True if the navigation request is successful, False otherwise.
         """
         # Set linear velocity based on speed limit
-        linear_velocity = speed_limit if speed_limit > 0.0 else 1.0
-        velocity = {"linear": linear_velocity, "angular": 1.0}
+        if speed_limit is not None:
+            linear_velocity = speed_limit if speed_limit > 0.0 else 1.0
+            velocity = {"linear": linear_velocity, "angular": 1.0}
 
-        url = self.prefix + "kachaka/set_robot_velocity"
-        requests.post(url, json=velocity)
+            url = self.prefix + "kachaka/set_robot_velocity"
+            requests.post(url, json=velocity)
 
         url = self.prefix + "kachaka/move_to_pose"
         position = {"x": pose[0], "y": pose[1], "yaw": pose[2]}
