@@ -214,7 +214,17 @@ class RobotAPI:
         Notes:
             - This method is not yet implemented in the robot API and always returns a placeholder value.
         """
-        return 0.8
+        url = self.prefix + "kachaka/get_battery_info"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                res = response.json()['get_battery_info']
+                return res[0] / 100.0
+            else:
+                return None
+        except requests.RequestException as e:
+            print(f"Error getting robot battery: {e}")
+            return None
 
     def map(self, robot_name: str) -> str | None:
         """
